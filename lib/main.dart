@@ -1,11 +1,15 @@
 // lib/main.dart
 import 'package:flutter/material.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'screens/main_navigation.dart';
 import 'services/notification_service.dart'; // Import service
 
 void main() async {
   // Pastikan binding Flutter sudah diinisialisasi sebelum memanggil fungsi async
   WidgetsFlutterBinding.ensureInitialized();
+
+  // Inisialisasi Firebase
+  await Firebase.initializeApp();
 
   // Inisialisasi notifikasi
   await NotificationService.init();
