@@ -7,6 +7,8 @@ import 'package:http/http.dart' as http;
 import 'dart:developer';
 import 'dart:convert';
 
+import '../models/notification_model.dart';
+
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp();
@@ -16,6 +18,8 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 class NotificationService {
   NotificationService._internal();
   static final NotificationService instance = NotificationService._internal();
+
+  final baseUrl = 'https://laravel.leviathanbolu.my.id/api';
 
   final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -65,41 +69,43 @@ class NotificationService {
       if (fcmToken == null) return;
 
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:8000/api/fcm-token'),
-        body: {
-          'user_id': dummyUserId.toString(),
-          'fcm_token': fcmToken,
-          'device_name': 'Android Device'
-        },
+        Uri.parse('$baseUrl/fcm-token'),
+        body: {'user_id': dummyUserId.toString(), 'fcm_token': fcmToken, 'device_name': 'Android Device'},
       );
-      
+
       log('Token sync status: ${response.statusCode}');
     } catch (e) {
       log('Token sync error: $e');
     }
   }
 
-  Future<Map<String, dynamic>> fetchNotifications({int page = 1, int dummyUserId = 1}) async {
+  Future<List<NotificationModel>> fetchNotifications({int page = 1, int dummyUserId = 1}) async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8000/api/notifications?page=$page&user_id=$dummyUserId'),
+        Uri.parse('$baseUrl/notifications?page=$page&user_id=$dummyUserId'),
       );
 
-      if (response.statusCode == 200) return jsonDecode(response.body);
-      return {};
+      if (response.statusCode == 200) {
+        final List<dynamic> data = jsonDecode(response.body);
+        return data.map((json) => NotificationModel.fromJson(json)).toList();
+      }
+      return [];
     } catch (e) {
       log('Fetch notif error: $e');
-      return {};
+      return [];
     }
   }
 
-  Future<Map<String, dynamic>?> fetchNotificationDetail(String notificationId, {int dummyUserId = 1}) async {
+  Future<NotificationModel?> fetchNotificationDetail(String notificationId, {int dummyUserId = 1}) async {
     try {
       final response = await http.get(
-        Uri.parse('http://10.0.2.2:8000/api/notifications/$notificationId?user_id=$dummyUserId'),
+        Uri.parse('$baseUrl/notifications/$notificationId?user_id=$dummyUserId'),
       );
 
-      if (response.statusCode == 200) return jsonDecode(response.body);
+      if (response.statusCode == 200) {
+        final data = jsonDecode(response.body);
+        return NotificationModel.fromJson(data);
+      }
       return null;
     } catch (e) {
       log('Fetch detail error: $e');
@@ -110,9 +116,9 @@ class NotificationService {
   Future<bool> markNotificationAsRead(String notificationId, {int dummyUserId = 1}) async {
     try {
       final response = await http.post(
-        Uri.parse('http://10.0.2.2:8000/api/notifications/$notificationId/read?user_id=$dummyUserId'),
+        Uri.parse('$baseUrl/notifications/$notificationId/read?user_id=$dummyUserId'),
       );
-      
+
       return response.statusCode == 200;
     } catch (e) {
       log('Mark read error: $e');
