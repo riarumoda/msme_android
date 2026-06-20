@@ -95,10 +95,19 @@ class NotificationService {
       final response = await http.get(
         Uri.parse('$baseUrl/notifications?page=$page&user_id=$dummyUserId'),
       );
+      print('Fetch notif response: ${response.statusCode} - ${response.body}');
 
       if (response.statusCode == 200) {
-        final List<dynamic> data = jsonDecode(response.body);
-        return data.map((json) => NotificationModel.fromJson(json)).toList();
+        // 1. Decode sebagai Map
+        final Map<String, dynamic> responseBody = jsonDecode(response.body);
+
+        // 2. Ambil list dari dalam key 'data'
+        final List<dynamic> dataList = responseBody['data'] ?? [];
+
+        // 3. Lakukan mapping
+        return dataList
+            .map((json) => NotificationModel.fromJson(json))
+            .toList();
       }
       return [];
     } catch (e) {

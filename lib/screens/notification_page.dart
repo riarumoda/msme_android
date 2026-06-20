@@ -35,34 +35,46 @@ class _NotificationPageState extends State<NotificationPage> {
       appBar: AppBar(
         title: const Text('Notifikasi'),
       ),
-      // floatingActionButton: FloatingActionButton.extended(
-      //   onPressed: () {
-      //     NotificationService.showDemoNotification(
-      //       id: DateTime.now().millisecond, // ID unik agar notif menumpuk
-      //       title: 'Stok Kritis!',
-      //       body:
-      //           'Gula Pasir 1kg sisa 1 Pcs. Segera lakukan restock ke Supplier.',
-      //     );
-      //   },
-      //   backgroundColor: Colors.indigo,
-      //   foregroundColor: Colors.white,
-      //   icon: const Icon(Icons.notification_add_outlined),
-      //   label: const Text('Test Notif Android'),
-      // ),
-      body: ListView.separated(
-        padding: const EdgeInsets.symmetric(vertical: 8),
-        itemCount: notifications.length,
-        separatorBuilder: (context, index) => Divider(
-          height: 1,
-          thickness: 1,
-          color: Colors.grey.shade200,
-          indent: 72,
-          endIndent: 16,
-        ),
-        itemBuilder: (context, index) {
-          final notif = notifications[index];
-          return _buildNotificationTile(notif);
-        },
+      // floatingActionButton: FloatingActionButton.extended( ... ), // (Bisa di-uncomment sesuai kebutuhanmu)
+
+      body: RefreshIndicator(
+        // Panggil fungsi _loadNotifications saat layar ditarik ke bawah
+        onRefresh: _loadNotifications,
+        color: Colors
+            .indigo, // Warna loading spinner disesuaikan dengan tema aplikasi
+
+        child: notifications.isEmpty
+            // Tampilan jika notifikasi kosong (tetap dibungkus ListView agar bisa di-pull)
+            ? ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                children: [
+                  SizedBox(height: MediaQuery.of(context).size.height * 0.3),
+                  const Center(
+                    child: Text(
+                      'Belum ada notifikasi',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                  ),
+                ],
+              )
+            // Tampilan jika ada notifikasi
+            : ListView.separated(
+                // Penting: Memastikan list selalu bisa ditarik meskipun itemnya sedikit
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.symmetric(vertical: 8),
+                itemCount: notifications.length,
+                separatorBuilder: (context, index) => Divider(
+                  height: 1,
+                  thickness: 1,
+                  color: Colors.grey.shade200,
+                  indent: 72,
+                  endIndent: 16,
+                ),
+                itemBuilder: (context, index) {
+                  final notif = notifications[index];
+                  return _buildNotificationTile(notif);
+                },
+              ),
       ),
     );
   }
