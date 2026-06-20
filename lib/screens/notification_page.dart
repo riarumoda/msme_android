@@ -14,10 +14,13 @@ class _NotificationPageState extends State<NotificationPage> {
   late List<NotificationModel> notifications = [];
 
   Future<void> _loadNotifications() async {
-    final fetchedNotifs = await NotificationService.instance.fetchNotifications();
+    final fetchedNotifs =
+        await NotificationService.instance.fetchNotifications();
     setState(() {
       notifications = fetchedNotifs;
     });
+    NotificationService.instance.unreadCount.value =
+        notifications.where((notification) => !notification.isRead).length;
   }
 
   @override
@@ -103,7 +106,10 @@ class _NotificationPageState extends State<NotificationPage> {
               ),
             ),
             Text(
-              notif.createdAt.toLocal().toString().substring(11, 16), // Hanya jam dan menit
+              notif.createdAt
+                  .toLocal()
+                  .toString()
+                  .substring(11, 16), // Hanya jam dan menit
               style: TextStyle(
                 fontSize: 12,
                 color: Colors.grey.shade500,
@@ -121,8 +127,19 @@ class _NotificationPageState extends State<NotificationPage> {
           height: 1.4,
         ),
       ),
-      onTap: () {
-        NotificationService.instance.markNotificationAsRead(notif.id);
+      onTap: () async {
+        final success =
+            await NotificationService.instance.markNotificationAsRead(notif.id);
+        if (success && mounted) {
+          setState(() {
+            final index =
+                notifications.indexWhere((item) => item.id == notif.id);
+            if (index != -1) {
+              notifications[index] =
+                  notifications[index].copyWith(isRead: true);
+            }
+          });
+        }
       },
     );
   }

@@ -21,13 +21,16 @@ class NotificationService {
 
   final baseUrl = 'https://laravel.leviathanbolu.my.id/api';
 
-  final FlutterLocalNotificationsPlugin _localNotifications = FlutterLocalNotificationsPlugin();
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
+  final ValueNotifier<int> unreadCount = ValueNotifier<int>(0);
 
   static Future<void> init() async {
     await instance._initLocalNotifications();
     await instance._initFirebaseMessaging();
     await instance.syncTokenWithBackend(dummyUserId: 1);
+    await instance.updateUnreadCount(dummyUserId: 1);
   }
 
   Future<void> _initLocalNotifications() async {
@@ -43,7 +46,8 @@ class NotificationService {
   }
 
   Future<void> _initFirebaseMessaging() async {
-    await _firebaseMessaging.requestPermission(alert: true, badge: true, sound: true);
+    await _firebaseMessaging.requestPermission(
+        alert: true, badge: true, sound: true);
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
       if (message.notification != null) {
@@ -53,6 +57,7 @@ class NotificationService {
           body: message.notification!.body ?? '',
           payload: message.data.toString(),
         );
+        _incrementUnreadCount();
       }
     });
 
@@ -63,14 +68,19 @@ class NotificationService {
     });
   }
 
-  Future<void> syncTokenWithBackend({required int dummyUserId, String? forceToken}) async {
+  Future<void> syncTokenWithBackend(
+      {required int dummyUserId, String? forceToken}) async {
     try {
       final fcmToken = forceToken ?? await _firebaseMessaging.getToken();
       if (fcmToken == null) return;
 
       final response = await http.post(
         Uri.parse('$baseUrl/fcm-token'),
-        body: {'user_id': dummyUserId.toString(), 'fcm_token': fcmToken, 'device_name': 'Android Device'},
+        body: {
+          'user_id': dummyUserId.toString(),
+          'fcm_token': fcmToken,
+          'device_name': 'Android Device'
+        },
       );
 
       log('Token sync status: ${response.statusCode}');
@@ -79,7 +89,8 @@ class NotificationService {
     }
   }
 
-  Future<List<NotificationModel>> fetchNotifications({int page = 1, int dummyUserId = 1}) async {
+  Future<List<NotificationModel>> fetchNotifications(
+      {int page = 1, int dummyUserId = 1}) async {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/notifications?page=$page&user_id=$dummyUserId'),
@@ -96,10 +107,12 @@ class NotificationService {
     }
   }
 
-  Future<NotificationModel?> fetchNotificationDetail(String notificationId, {int dummyUserId = 1}) async {
+  Future<NotificationModel?> fetchNotificationDetail(String notificationId,
+      {int dummyUserId = 1}) async {
     try {
       final response = await http.get(
-        Uri.parse('$baseUrl/notifications/$notificationId?user_id=$dummyUserId'),
+        Uri.parse(
+            '$baseUrl/notifications/$notificationId?user_id=$dummyUserId'),
       );
 
       if (response.statusCode == 200) {
@@ -113,13 +126,22 @@ class NotificationService {
     }
   }
 
-  Future<bool> markNotificationAsRead(String notificationId, {int dummyUserId = 1}) async {
+  Future<bool> markNotificationAsRead(String notificationId,
+      {int dummyUserId = 1}) async {
     try {
       final response = await http.post(
-        Uri.parse('$baseUrl/notifications/$notificationId/read?user_id=$dummyUserId'),
+        Uri.parse(
+            '$baseUrl/notifications/$notificationId/read?user_id=$dummyUserId'),
       );
 
-      return response.statusCode == 200;
+      if (response.statusCode == 200) {
+        if (unreadCount.value > 0) {
+          unreadCount.value = unreadCount.value - 1;
+        }
+        return true;
+      }
+
+      return false;
     } catch (e) {
       log('Mark read error: $e');
       return false;
@@ -150,6 +172,16 @@ class NotificationService {
       payload: payload,
       notificationDetails: NotificationDetails(android: androidDetails),
     );
+  }
+
+  void _incrementUnreadCount() {
+    unreadCount.value = unreadCount.value + 1;
+  }
+
+  Future<void> updateUnreadCount({int dummyUserId = 1}) async {
+    final notifications = await fetchNotifications(dummyUserId: dummyUserId);
+    unreadCount.value =
+        notifications.where((notification) => !notification.isRead).length;
   }
 
   static Future<void> showDemoNotification({

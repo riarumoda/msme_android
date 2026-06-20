@@ -29,4 +29,15 @@ class NotificationModel {
           : DateTime.now(),
     );
   }
+
+  NotificationModel copyWith({required bool isRead}) {
+    return NotificationModel(
+      id: id,
+      title: title,
+      body: body,
+      itemId: itemId,
+      isRead: isRead,
+      createdAt: createdAt,
+    );
+  }
 }

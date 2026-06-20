@@ -1,5 +1,6 @@
 // lib/screens/main_navigation.dart
 import 'package:flutter/material.dart';
+import '../services/notification_service.dart';
 import 'notification_page.dart'; // Import halaman notifikasi
 
 class MainNavigation extends StatefulWidget {
@@ -20,6 +21,12 @@ class _MainNavigationState extends State<MainNavigation> {
   ];
 
   @override
+  void initState() {
+    super.initState();
+    NotificationService.instance.updateUnreadCount();
+  }
+
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: _pages[_selectedIndex],
@@ -33,29 +40,40 @@ class _MainNavigationState extends State<MainNavigation> {
         backgroundColor: Colors.white,
         elevation: 10,
         indicatorColor: Colors.indigo.withOpacity(0.15),
-        destinations: const [
-          NavigationDestination(
+        destinations: [
+          const NavigationDestination(
             icon: Icon(Icons.dashboard_outlined),
             selectedIcon: Icon(Icons.dashboard, color: Colors.indigo),
             label: 'Dashboard',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.inventory_2_outlined),
             selectedIcon: Icon(Icons.inventory_2, color: Colors.indigo),
             label: 'Barang',
           ),
           NavigationDestination(
-            icon: Badge(
-              label: Text('3'),
-              child: Icon(Icons.notifications_outlined),
+            icon: ValueListenableBuilder<int>(
+              valueListenable: NotificationService.instance.unreadCount,
+              builder: (context, count, child) {
+                final icon = const Icon(Icons.notifications_outlined);
+                return count > 0
+                    ? Badge(label: Text('$count'), child: icon)
+                    : icon;
+              },
             ),
-            selectedIcon: Badge(
-              label: Text('3'),
-              child: Icon(Icons.notifications, color: Colors.indigo),
+            selectedIcon: ValueListenableBuilder<int>(
+              valueListenable: NotificationService.instance.unreadCount,
+              builder: (context, count, child) {
+                final icon =
+                    const Icon(Icons.notifications, color: Colors.indigo);
+                return count > 0
+                    ? Badge(label: Text('$count'), child: icon)
+                    : icon;
+              },
             ),
             label: 'Notifikasi',
           ),
-          NavigationDestination(
+          const NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings, color: Colors.indigo),
             label: 'Settings',
